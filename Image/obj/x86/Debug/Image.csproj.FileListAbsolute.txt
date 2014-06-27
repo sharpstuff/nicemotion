@@ -1,0 +1,10 @@
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\acid.jpg
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\Image.exe
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\Image.pdb
+D:\Dropbox\Dropbox\Work\Image\Image\obj\x86\Debug\Image.exe
+D:\Dropbox\Dropbox\Work\Image\Image\obj\x86\Debug\Image.pdb
+D:\Dropbox\Dropbox\Work\Image\Image\obj\x86\Debug\Image.csprojResolveAssemblyReference.cache
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\bike1.jpg
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\bike2.jpg
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\false1.jpg
+D:\Dropbox\Dropbox\Work\Image\Image\bin\Debug\false2.jpg
