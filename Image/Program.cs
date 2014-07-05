@@ -1,144 +1,129 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
 
-namespace Image
+namespace nicecuppa.graphics
 {
     class Program
     {
+        static Dictionary<string, string> argFlags = new Dictionary<string, string>();
+        static List<string> argFiles = new List<string>();
+
         static void Main(string[] args)
         {
-            if (args.Length == 2)
+            //Motion motion = new ClumsyMotion();
+            Motion motion = new EdgeMotion();
+            motion.DumpOutput = true;
+
+            processArgs(args);
+
+            if (argFlags.ContainsKey("-help") || args.Length == 0 || argFiles.Count == 0)
             {
-                float motionThreshold = 0.1f;
+                help();
+            }
+            else if (argFiles.Count == 2)
+            {
+                float motionTolerance = 0.02f;
+                int xmin, ymin,xmax, ymax = 0;
 
-                float mcomp = motionDetect(args[0], args[1], 10, 0, 90);
+                if (argFlags.ContainsKey("-dumpoutput"))
+                {
+                    motion.DumpOutput = true;
+                }
 
-                Console.WriteLine(mcomp > motionThreshold ? "true" : "false");
+                if (argFlags.ContainsKey("-tolerance"))
+                {
+                    int t = 10;
+
+                    if ( int.TryParse(argFlags["-tolerance"], out t) )
+                    {
+                        motion.Tolerance = t;
+                    }
+                }
+
+                if (argFlags.ContainsKey("-debug"))
+                    motion.Debug = true;
+
+                if (argFlags.ContainsKey("-motiontolerance"))
+                {
+                    float.TryParse(argFlags["-motiontolerance"], out motionTolerance);
+                }
+
+                if (argFlags.ContainsKey("-minxy"))
+                {
+                    string val = argFlags["-minxy"];
+                    string[] tuple = val.Split(',');
+                    int.TryParse(tuple[0], out xmin);
+                    int.TryParse(tuple[1], out ymin);
+                }
+                else
+                {
+                    xmin = 0;
+                    ymin = 0;
+                }
+
+                if (argFlags.ContainsKey("-maxxy"))
+                {
+                    string val = argFlags["-maxxy"];
+                    string[] tuple = val.Split(',');
+                    int.TryParse(tuple[0], out xmax);
+                    int.TryParse(tuple[1], out ymax);
+                }
+                else
+                {
+                    xmax = -1;
+                    ymax = -1;
+                }
+
+                float mcomp = motion.MotionDetect(argFiles[0], argFiles[1], xmin, ymin, xmax, ymax);
+
+                Console.WriteLine(mcomp > motionTolerance ? "true" : "false");
+
             }
             else
             {
-                Console.WriteLine("Guru meditation, args?");
+                help();
             }
+       } 
+
+        static void help()
+        {
+            Console.WriteLine("motion.exe [flags] InputFilename, InputFilename");
+            Console.WriteLine("Version 1.1");
+            Console.WriteLine("");
+            Console.WriteLine("Flags:");
+            Console.WriteLine("  -tolerance             Colour tolerance for detecting motion [0-255]");
+            Console.WriteLine("                         (default 10");
+            Console.WriteLine("  -motiontolerance       Proportion of image to detect change [0.0-1.0]");
+            Console.WriteLine("                         (default 0.02");
+            Console.WriteLine("  -debug                 Show debug output");
+            Console.WriteLine("");
         }
 
-        static float motionDetect( string filename1, string filename2, int tolerance, int xmin = 0, int ymin = 0, int xmax = -1, int ymax = -1 )
+        static void processArgs(string[] args)
         {
-            Bitmap inputBitmap1 = new Bitmap(filename1);
-            toGreyScale(inputBitmap1);
-            toPixelate(inputBitmap1, 8);
-
-            Bitmap inputBitmap2 = new Bitmap(filename2);
-            toGreyScale(inputBitmap2);
-            toPixelate(inputBitmap2, 8);
-
-            float delta = compareBitmap(inputBitmap1, inputBitmap2, tolerance, xmin, ymin, xmax, ymax);
-
-            inputBitmap1.Save("out.jpg");
-
-            return delta;
-        }
-
-        static float compareBitmap( Bitmap b1, Bitmap b2, int tolerance, int xmin, int ymin, int xmax, int ymax)
-        {
-            int xmaxActual = xmax == -1 ? b1.Width : xmax;
-            int ymaxActual = ymax == -1 ? b1.Height : ymax;
-
-            long pixelCount = 0;
-            long pixelDeltaCount = 0;
-
-            for (int x = xmin; x < xmaxActual; x++)
+            // Loop over all arguments
+            for (int i = 0; i < args.Length; i++)
             {
-                for (int y = ymin; y < ymaxActual; y++)
+                // If starts with a dash then it's a flag
+                if (args[i].StartsWith("-"))
                 {
-                    Color c1 = b1.GetPixel(x, y);
-                    Color c2 = b2.GetPixel(x, y);
-
-                    int difference = Math.Abs( c1.R - c2.R );
-
-                    if ( difference > tolerance )
+                    // If it contains a colon then we should expect an expression with the flag
+                    if (args[i].Contains(":"))
                     {
-                        b1.SetPixel(x, y, Color.Red);
-                        pixelDeltaCount++;
+                        string[] parts = args[i].Split(new char[] { ':' });
+                        argFlags.Add(parts[0], parts[1]);
                     }
-
-                    pixelCount++;
+                    else
+                    {
+                        argFlags.Add(args[i], args[i]);
+                    }
                 }
-            }
-
-            if (pixelDeltaCount == 0)
-                return 0;
-            else
-                return (float)pixelDeltaCount / (float)pixelCount;
-        }
-
-        static void toPixelate(Bitmap b, int blockSize, int numGreyLevels = -1)
-        {
-            int realColourScale = 256 / numGreyLevels;
-
-            for (int x = 0; x < b.Width; x += blockSize)
-            {
-                for (int y = 0; y < b.Height; y += blockSize)
+                else
                 {
-                    int greyScale = 0;
-
-                    for (int xx = 0; xx < blockSize; ++xx)
-                    {
-                        for (int yy = 0; yy < blockSize; ++yy)
-                        {
-                            if (x + xx >= b.Width || y + yy >= b.Height)
-                            {
-                                continue;
-                            }
-
-                            var color = b.GetPixel(x + xx, y + yy);
-                            greyScale += color.R;
-                        }
-                    }
-
-                    // average blockcolor
-                    greyScale = greyScale / (blockSize * blockSize);
-
-                    if ( numGreyLevels > 0 )
-                        greyScale = (greyScale / realColourScale) * realColourScale;
-
-                    // new colour
-                    Color newScale = Color.FromArgb(greyScale, greyScale, greyScale);
-
-                    // set pixels
-                    for (int xx = 0; xx < blockSize; ++xx)
-                    {
-                        for (int yy = 0; yy < blockSize; ++yy)
-                        {
-                            if (x + xx >= b.Width || y + yy >= b.Height)
-                            {
-                                continue;
-                            }
-                            b.SetPixel(x + xx, y + yy, newScale);                            
-                        }
-                    }
-
-                }
-            }
-        }
-
-        static void toGreyScale(Bitmap b)
-        {
-            int x, y;
-
-            for (x = 0; x < b.Width; x++)
-            {
-                for (y = 0; y < b.Height; y++)
-                {
-                    Color pixelColor = b.GetPixel(x, y);
-
-                    int greyScale = (pixelColor.R + pixelColor.G + pixelColor.B) / 3;
-
-                    Color newColor = Color.FromArgb(greyScale, greyScale, greyScale);
-                    b.SetPixel(x, y, newColor); // Now greyscale
+                    argFiles.Add(args[i]);
                 }
             }
         }
